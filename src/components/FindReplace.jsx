@@ -1,5 +1,5 @@
 // Feature #6: Find & Replace panel — works with CodeMirror via cmRef
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { X, ChevronDown, ChevronUp } from 'lucide-react'
 
 export function FindReplace({ cmRef, content, onUpdateContent, onClose }) {
@@ -26,7 +26,7 @@ export function FindReplace({ cmRef, content, onUpdateContent, onClose }) {
     return matches
   }, [findText, content, caseSensitive])
 
-  const matches = getMatches()
+  const matches = useMemo(() => getMatches(), [getMatches])
   const safeIndex = matches.length > 0 ? matchIndex % matches.length : 0
 
   // Highlight current match in CodeMirror by setting selection and scrolling into view

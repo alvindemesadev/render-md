@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkGemoji from 'remark-gemoji'
@@ -6,6 +6,7 @@ import rehypeRaw from 'rehype-raw'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import { Download, FileCode, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { Button } from './ui/button'
+import { useDarkMode } from '../lib/utils'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
@@ -32,17 +33,7 @@ export function Preview({
 }) {
   const previewScrollRef = useRef(null)
 
-  // Track dark mode reactively for syntax highlighter theme selection
-  const [isDark, setIsDark] = useState(
-    document.documentElement.classList.contains('dark')
-  )
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.classList.contains('dark'))
-    })
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-    return () => observer.disconnect()
-  }, [])
+  const isDark = useDarkMode()
 
   const isLeftSidebarLayout = layout === 'default' || layout === 'sidebar_tabs' || layout === 'editor_only' || layout === 'preview_only'
 
@@ -91,8 +82,8 @@ ${previewEl.innerHTML}
 
   return (
     <section className="flex-1 flex flex-col h-full bg-white dark:bg-zinc-950 overflow-hidden transition-colors duration-150 border-zinc-200 dark:border-zinc-800">
-      {/* Preview Header */}
-      <div className="h-16 px-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0 select-none bg-white dark:bg-zinc-950">
+      {/* Preview Header — hidden on mobile (mobile top bar handles navigation) */}
+      <div className="hidden lg:flex h-16 px-4 border-b border-zinc-200 dark:border-zinc-800 items-center justify-between shrink-0 select-none bg-white dark:bg-zinc-950">
         <div className="flex-1 flex items-center min-w-0 gap-2">
           {isLeftSidebarLayout && !isEditorVisible && (
             <Button variant="ghost" size="icon" onClick={onToggleSidebar}

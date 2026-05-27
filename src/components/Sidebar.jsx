@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Plus, Trash2, FileText, Sun, Moon, Pencil, BookOpen, Copy, Search, X, Settings, GripVertical, Upload, Pin, PinOff, Command, Download, LayoutTemplate } from 'lucide-react'
 import { Button } from './ui/button'
+import { useDarkMode, getRelativeTime } from '../lib/utils'
 import {
   Dialog,
   DialogContent,
@@ -14,26 +15,27 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities'
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 
+function RenderMDLogo({ size = 28 }) {
+  const isDark = useDarkMode()
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
+      {/* Background: near-black in light mode, near-white in dark mode */}
+      <rect width="32" height="32" rx="7" fill={isDark ? '#f4f4f5' : '#09090b'} />
+      {/* R lettermark */}
+      <text x="5" y="24" fontFamily="ui-sans-serif,system-ui,sans-serif" fontSize="22" fontWeight="700" fill={isDark ? '#09090b' : '#ffffff'}>R</text>
+      {/* md pill */}
+      <rect x="17" y="19" width="13" height="8" rx="2" fill={isDark ? '#a1a1aa' : '#3f3f46'} />
+      <text x="19" y="26" fontFamily="ui-monospace,monospace" fontSize="7" fontWeight="600" fill={isDark ? '#27272a' : '#d4d4d8'}>md</text>
+    </svg>
+  )
+}
+
 function getFullDate(timestamp) {
   return new Date(timestamp).toLocaleString(undefined, {
     year: 'numeric', month: 'long', day: 'numeric',
     hour: '2-digit', minute: '2-digit'
   })
-}
-
-function getRelativeTime(timestamp) {
-  const now = Date.now()
-  const diff = now - timestamp
-  const seconds = Math.floor(diff / 1000)
-  if (seconds < 10) return 'Just now'
-  if (seconds < 60) return `${seconds}s ago`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
-  return new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
 function getSnippet(content) {
@@ -67,6 +69,7 @@ function NoteItem({ note, isActive, index, onSelect, onDuplicate, onRename, onDe
         {...attributes}
         role="button"
         tabIndex={0}
+        data-note-id={note.id}
         onClick={() => onSelect(note.id)}
         onKeyDown={(e) => onKeyDown(e, note.id, index)}
         aria-current={isActive ? 'true' : undefined}
@@ -242,11 +245,23 @@ export function Sidebar({
     const oldIdx = filteredNotes.findIndex(n => n.id === active.id)
     const newIdx = filteredNotes.findIndex(n => n.id === over.id)
     if (oldIdx === -1 || newIdx === -1) return
+    // Reorder only within filtered view, then merge back with non-filtered notes
     const reordered = [...filteredNotes]
     const [moved] = reordered.splice(oldIdx, 1)
     reordered.splice(newIdx, 0, moved)
-    onReorderNotes(reordered.map(n => n.id))
-  }, [filteredNotes, onReorderNotes])
+    // Build final ID list: reordered filtered notes merged with non-filtered notes
+    // preserving their relative positions in the full sorted list
+    const filteredIds = new Set(filteredNotes.map(n => n.id))
+    const nonFilteredIds = sortedNotes.filter(n => !filteredIds.has(n.id)).map(n => n.id)
+    // Interleave: put non-filtered notes back at their original positions
+    const allIds = sortedNotes.map(n => n.id)
+    let filteredIdx = 0
+    const mergedIds = allIds.map(id => {
+      if (filteredIds.has(id)) return reordered[filteredIdx++].id
+      return id
+    })
+    onReorderNotes(mergedIds)
+  }, [filteredNotes, sortedNotes, onReorderNotes])
 
   const handleDeleteClick = (e, noteId) => { e.stopPropagation(); setDeleteConfirmId(noteId) }
   const handleRenameClick = (noteId, currentTitle) => { onRenameNote(noteId, currentTitle) }
@@ -282,8 +297,9 @@ export function Sidebar({
     <>
       {/* App Banner */}
       <div className="h-16 px-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0 bg-zinc-50 dark:bg-zinc-950">
-        <div className="flex items-center gap-2 font-bold text-zinc-900 dark:text-white text-xl tracking-tight select-none">
-          <span>RenderMD</span>
+        <div className="flex items-center gap-2.5 select-none">
+          <RenderMDLogo size={28} />
+          <span className="font-bold text-zinc-900 dark:text-white text-base tracking-tight">RenderMD</span>
         </div>
         <Button
           type="button"
@@ -507,9 +523,10 @@ export function Sidebar({
       <aside
         aria-label="Document sidebar"
         aria-hidden={!isSidebarOpen}
+        {...(!isSidebarOpen ? { inert: true } : {})}
         className={`lg:hidden fixed inset-y-0 ${slideFrom} z-50 transition-transform duration-300 ease-in-out bg-zinc-50 dark:bg-zinc-950 flex flex-col h-full text-zinc-700 dark:text-zinc-300 ${
           isSidebarOpen ? 'translate-x-0' : slideOutClass
-        } ${borderSide} border-zinc-200 dark:border-zinc-800 w-[280px] md:w-[320px]`}
+        } ${borderSide} border-zinc-200 dark:border-zinc-800 w-[280px] lg:w-[320px]`}
       >
         {sidebarContent}
       </aside>
@@ -521,7 +538,7 @@ export function Sidebar({
         {...(!isSidebarOpen ? { inert: true } : {})}
         className={`hidden lg:flex transition-all duration-300 ease-in-out shrink-0 bg-zinc-50 dark:bg-zinc-950 flex-col h-full text-zinc-700 dark:text-zinc-300 ${
           isSidebarOpen
-            ? `w-[280px] md:w-[320px] ${borderSide} border-zinc-200 dark:border-zinc-800`
+            ? `w-[280px] lg:w-[320px] ${borderSide} border-zinc-200 dark:border-zinc-800`
             : 'w-0 overflow-hidden'
         }`}
       >
@@ -530,3 +547,4 @@ export function Sidebar({
     </>
   )
 }
+

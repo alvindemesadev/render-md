@@ -16,12 +16,8 @@ import { vim } from '@replit/codemirror-vim'
 import { EditorView, keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
 
-function getWordCount(text) {
-  if (!text) return 0
-  const cleanText = text.trim()
-  if (!cleanText) return 0
-  return cleanText.split(/\s+/).filter(Boolean).length
-}
+import { getWordCount } from '../lib/utils'
+import { useDarkMode } from '../lib/utils'
 
 function getReadingTime(text) {
   const words = getWordCount(text)
@@ -95,17 +91,7 @@ export function Editor({
 
   const saveState = useAutosaveIndicator(note?.content ?? '')
 
-  // Reactively track dark mode by watching the <html> class
-  const [isDark, setIsDark] = useState(
-    document.documentElement.classList.contains('dark')
-  )
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.classList.contains('dark'))
-    })
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-    return () => observer.disconnect()
-  }, [])
+  const isDark = useDarkMode()
 
   // Feature #6: Ctrl+F opens Find & Replace
   useEffect(() => {
@@ -284,7 +270,7 @@ export function Editor({
   if (!note) {
     return (
       <div className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500">
-        <div className="h-16 px-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0 bg-white dark:bg-zinc-950">
+        <div className="hidden lg:flex h-16 px-4 border-b border-zinc-200 dark:border-zinc-800 items-center justify-between shrink-0 bg-white dark:bg-zinc-950">
           {isLeftSidebarLayout && (
             <Button variant="ghost" size="icon" onClick={onToggleSidebar}
               aria-label={isSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
@@ -332,9 +318,9 @@ export function Editor({
   return (
     <section className="flex-1 flex flex-col h-full bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200">
 
-      {/* Header — hidden in focus mode */}
+      {/* Header — hidden in focus mode AND on mobile (mobile top bar handles it) */}
       {!isFocusMode && (
-        <div className="h-16 px-4 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex items-center justify-between shrink-0 gap-2">
+        <div className="hidden lg:flex h-16 px-4 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 items-center justify-between shrink-0 gap-2">
           <div className="flex items-center min-w-0 gap-2 flex-1">
             {isLeftSidebarLayout && (
               <Button variant="ghost" size="icon" onClick={onToggleSidebar}
@@ -493,7 +479,7 @@ export function Editor({
 
       {/* Status Bar — hidden in focus mode */}
       {!isFocusMode && (
-        <div className={`h-9 px-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0 font-mono text-[11px] select-none ${
+        <div className={`h-9 px-3 lg:px-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0 font-mono text-[11px] select-none ${
           limitWarning === 'over' ? 'bg-red-50 dark:bg-red-950/20'
           : limitWarning === 'near' ? 'bg-amber-50 dark:bg-amber-950/20'
           : 'bg-zinc-50 dark:bg-zinc-950'

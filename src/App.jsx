@@ -3,7 +3,7 @@ import { Sidebar } from './components/Sidebar'
 import { Editor } from './components/Editor'
 import { Preview } from './components/Preview'
 import { useLocalStorage, setQuotaWarningHandler } from './hooks/useLocalStorage'
-import { useVersionHistory } from './hooks/useVersionHistory'
+import { clearSnapshots } from './hooks/useVersionHistory'
 import { useToast } from './hooks/useToast'
 import { WELCOME_NOTE } from './lib/welcomeNote'
 import { CreateNoteDialog } from './components/CreateNoteDialog'
@@ -29,10 +29,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './components/ui/dropdown-menu'
+import { ExportNotesDialog } from './components/ExportNotesDialog'
 import { Layout, Columns3, Columns, Notebook, BookOpen, Maximize2, Split, Eye, SquarePen, ChevronDown } from 'lucide-react'
 
 // Helper Layout Selector Dropdown
 function LayoutSelector({ layout, onChangeLayout, variant = 'header' }) {
+  // Detect mobile — only show mobile-appropriate layouts below lg (1024px)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const handler = (e) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
   const layoutNames = {
     default: '3-Column Left',
     split_sidebar: '3-Column Right',
@@ -62,7 +72,20 @@ function LayoutSelector({ layout, onChangeLayout, variant = 'header' }) {
     }
   }
 
-  const groups = [
+  // Mobile: only 3 layouts that make sense — all keep the sidebar accessible
+  const mobileGroups = [
+    {
+      label: 'Mobile Layouts',
+      items: [
+        { id: 'sidebar_tabs', name: 'Tabs (Write / Preview)', icon: <Columns className="w-4 h-4" /> },
+        { id: 'editor_only', name: 'Editor Focus', icon: <Notebook className="w-4 h-4" /> },
+        { id: 'preview_only', name: 'Preview Focus', icon: <BookOpen className="w-4 h-4" /> },
+      ]
+    }
+  ]
+
+  // Desktop: all layouts
+  const desktopGroups = [
     {
       label: 'Standard Layouts',
       items: [
@@ -94,6 +117,8 @@ function LayoutSelector({ layout, onChangeLayout, variant = 'header' }) {
       ]
     }
   ]
+
+  const groups = isMobile ? mobileGroups : desktopGroups
 
   return (
     <DropdownMenu>
@@ -224,11 +249,14 @@ export default function App() {
   // Feature #5: char limit (global setting)
   const [charLimit, setCharLimit] = useLocalStorage('rendermd_char_limit', 0)
 
-  // Feature #25: version history cleanup on note delete
-  const { clearSnapshots } = useVersionHistory(null, null)
+  // Feature #25: version history cleanup on note delete — use standalone function, no hook needed
+  // const { clearSnapshots } = useVersionHistory(null, null) — removed, using imported standalone fn
 
   // Feature #2: tags — stored on each note as note.tags = []
   const [tagFilter, setTagFilter] = useState(null)
+
+  // Export notes modal
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false)
 
   // Feature #21: GitHub Gist sync
   const [gistToken, setGistToken] = useLocalStorage('rendermd_gist_token', '')
@@ -385,23 +413,11 @@ export default function App() {
   }
 
   const handleExportAllNotes = () => {
-    const data = notes.map(n => ({
-      title: n.title,
-      content: n.content,
-      updatedAt: n.updatedAt,
-      tags: n.tags || [],
-      pinned: n.pinned || false,
-    }))
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `rendermd-notes-${new Date().toISOString().slice(0, 10)}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-    toast('All notes exported as JSON', 'success')
+    if (notes.length === 0) {
+      toast('No notes to export', 'info')
+      return
+    }
+    setIsExportModalOpen(true)
   }
 
   // Feature #18: set word goal on active note — stored separately, does not bump updatedAt
@@ -499,7 +515,10 @@ export default function App() {
   const handleExportHTML = () => {
     if (!activeNote) return
     const previewEl = previewContentRef.current?.querySelector('article')
-    if (!previewEl) return
+    if (!previewEl) {
+      toast('Switch to a layout that shows the Preview pane first', 'info')
+      return
+    }
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -549,7 +568,33 @@ ${previewEl.innerHTML}
     })
   }, [setNotes])
 
+  // Mobile layouts that are valid — anything else gets corrected to sidebar_tabs
+  const MOBILE_VALID_LAYOUTS = ['sidebar_tabs', 'editor_only', 'preview_only']
+
+  // Auto-correct layout on mobile: if current layout is desktop-only, switch to sidebar_tabs
+  useEffect(() => {
+    const isMobileScreen = window.innerWidth < 1024
+    if (isMobileScreen && !MOBILE_VALID_LAYOUTS.includes(layout)) {
+      setLayout('sidebar_tabs')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // intentionally runs once on mount only
+
   const isZenLayout = layout === 'zen' || layout === 'zen_split' || layout === 'zen_editor' || layout === 'zen_preview'
+  const hasSidebar = !isZenLayout
+  const isSplitLayout = layout === 'default' || layout === 'split_sidebar' || layout === 'zen_split'
+  const isTabbedLayout = layout === 'sidebar_tabs' || layout === 'tabs_sidebar' || layout === 'zen'
+  const isEditorOnlyLayout = layout === 'editor_only' || layout === 'zen_editor'
+  const isPreviewOnlyLayout = layout === 'preview_only' || layout === 'zen_preview'
+  const isSidebarRight = layout === 'tabs_sidebar' || layout === 'split_sidebar'
+
+  // Which pane(s) are visible on desktop
+  const showEditorDesktop = !isPreviewOnlyLayout && (!isTabbedLayout || editorTab === 'edit')
+  const showPreviewDesktop = !isEditorOnlyLayout && (!isTabbedLayout || editorTab === 'preview')
+
+  // Which pane is visible on mobile (single pane at a time for split layouts)
+  const showEditorMobile = isSplitLayout ? mobileTab === 'edit' : showEditorDesktop
+  const showPreviewMobile = isSplitLayout ? mobileTab === 'preview' : showPreviewDesktop
 
   const layoutSelectorSidebar = (
     <LayoutSelector layout={layout} onChangeLayout={setLayout} variant="sidebar" />
@@ -559,125 +604,143 @@ ${previewEl.innerHTML}
     <LayoutSelector layout={layout} onChangeLayout={setLayout} variant="header" />
   ) : null
 
+  const sidebarProps = {
+    notes, activeNoteId,
+    onSelectNote: handleSelectNote,
+    onCreateNote: triggerNamingModal,
+    onDeleteNote: handleDeleteNote,
+    onDuplicateNote: handleDuplicateNote,
+    theme, onToggleTheme: toggleTheme,
+    onRenameNote: (id, title) => { setRenameNoteId(id); setRenameTitle((title || '').replace(/\.md$/i, '')) },
+    isSidebarOpen,
+    layoutSelector: layoutSelectorSidebar,
+    onOpenCheatsheet: () => setIsCheatsheetOpen(true),
+    onOpenSettings: () => setShowGistSettings(true),
+    layout,
+    onReorderNotes: handleReorderNotes,
+    onToggleSidebar: () => setIsSidebarOpen(prev => !prev),
+    onImportMarkdown: handleImportMarkdown,
+    onTogglePin: handleTogglePin,
+    onOpenTemplates: () => setIsTemplatesOpen(true),
+    onOpenShortcuts: () => setIsShortcutsOpen(true),
+    onOpenSearch: () => setIsSearchOpen(true),
+    onExportAll: handleExportAllNotes,
+    tagFilter, onSetTagFilter: setTagFilter,
+  }
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans antialiased">
-      {/* Column 1: Document Explorer (Sidebar) - Left position */}
-      {layout !== 'zen' && layout !== 'zen_split' && layout !== 'zen_editor' && layout !== 'zen_preview' && layout !== 'tabs_sidebar' && layout !== 'split_sidebar' && (
-        <Sidebar
-          notes={notes}
-          activeNoteId={activeNoteId}
-          onSelectNote={handleSelectNote}
-          onCreateNote={triggerNamingModal}
-          onDeleteNote={handleDeleteNote}
-          onDuplicateNote={handleDuplicateNote}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          onRenameNote={(id, title) => {
-            setRenameNoteId(id)
-            setRenameTitle((title || '').replace(/\.md$/i, ''))
-          }}
-          isSidebarOpen={isSidebarOpen}
-          layoutSelector={layoutSelectorSidebar}
-          onOpenCheatsheet={() => setIsCheatsheetOpen(true)}
-          onOpenSettings={() => setShowGistSettings(true)}
-          layout={layout}
-          onReorderNotes={handleReorderNotes}
-          onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
-          onImportMarkdown={handleImportMarkdown}
-          onTogglePin={handleTogglePin}
-          onOpenTemplates={() => setIsTemplatesOpen(true)}
-          onOpenShortcuts={() => setIsShortcutsOpen(true)}
-          onOpenSearch={() => setIsSearchOpen(true)}
-          onExportAll={handleExportAllNotes}
-          tagFilter={tagFilter}
-          onSetTagFilter={setTagFilter}
-        />
-      )}
 
-      {/* Editor & Preview Pane Container */}
+      {/* Sidebar — left position (all layouts except right-sidebar and zen) */}
+      {hasSidebar && !isSidebarRight && <Sidebar {...sidebarProps} />}
+
+      {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
-        {/* Responsive Mobile Header tabs: only visible on screens < lg (1024px) for non-tabbed layouts */}
-        {activeNote && (layout === 'default' || layout === 'split_sidebar' || layout === 'zen_split') && (
-          <div className="lg:hidden h-12 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 flex items-center shrink-0 select-none">
-            <button
-              onClick={() => setMobileTab('edit')}
-                className={`flex-1 text-center h-full text-xs font-mono uppercase tracking-wider flex items-center justify-center border-b-2 transition-all ${
-                  mobileTab === 'edit'
-                    ? 'border-zinc-800 dark:border-zinc-200 text-zinc-900 dark:text-white bg-zinc-100 dark:bg-zinc-900/40'
-                    : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-                } focus-visible:outline-2 focus-visible:outline-zinc-400 focus-visible:outline-offset-[-2px]`}
-            >
-              Editor
-            </button>
-            <button
-              onClick={() => setMobileTab('preview')}
-                className={`flex-1 text-center h-full text-xs font-mono uppercase tracking-wider flex items-center justify-center border-b-2 transition-all ${
-                  mobileTab === 'preview'
-                    ? 'border-zinc-800 dark:border-zinc-200 text-zinc-900 dark:text-white bg-zinc-100 dark:bg-zinc-900/40'
-                    : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-                } focus-visible:outline-2 focus-visible:outline-zinc-400 focus-visible:outline-offset-[-2px]`}
-            >
-              Preview
-            </button>
-          </div>
-        )}
 
-        {/* Content View: Editor and Preview Columns */}
-        <div className="flex-1 flex min-w-0 h-full overflow-hidden bg-white dark:bg-zinc-900">
-          {/* Column 2: The Editor Pane */}
-          {layout !== 'preview_only' && layout !== 'zen_preview' && (layout !== 'sidebar_tabs' && layout !== 'tabs_sidebar' && layout !== 'zen' || editorTab === 'edit') && (
-            <div
-              className={`flex-1 h-full min-w-0 ${
-                (layout === 'default' || layout === 'split_sidebar' || layout === 'zen_split') ? (mobileTab === 'edit' ? 'flex' : 'hidden lg:flex') : 'flex'
-              }`}
+        {/* ── Mobile top bar (< lg) ── always visible ── */}
+        <div className="lg:hidden shrink-0 h-12 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 flex items-center select-none gap-1">
+
+          {/* Sidebar toggle — only when a sidebar exists */}
+          {hasSidebar ? (
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(v => !v)}
+              aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+              className="h-full px-3 flex items-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors shrink-0"
             >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <rect x="1" y="3" width="16" height="1.5" rx="0.75" fill="currentColor"/>
+                <rect x="1" y="8.25" width="16" height="1.5" rx="0.75" fill="currentColor"/>
+                <rect x="1" y="13.5" width="16" height="1.5" rx="0.75" fill="currentColor"/>
+              </svg>
+            </button>
+          ) : (
+            <div className="w-3" />
+          )}
+
+          {/* Note title */}
+          <span className="flex-1 text-sm font-semibold text-zinc-800 dark:text-zinc-200 truncate min-w-0 px-1">
+            {activeNote ? (activeNote.title || '').replace(/\.md$/i, '') || 'Untitled' : 'RenderMD'}
+          </span>
+
+          {/* Edit/Preview toggle for split layouts */}
+          {activeNote && isSplitLayout && (
+            <div className="flex shrink-0 mr-3">
+              <button type="button" onClick={() => setMobileTab('edit')}
+                className={`px-3 h-8 text-xs font-medium rounded-l-md border transition-colors cursor-pointer ${mobileTab === 'edit' ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100' : 'bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700'}`}
+              >Edit</button>
+              <button type="button" onClick={() => setMobileTab('preview')}
+                className={`px-3 h-8 text-xs font-medium rounded-r-md border-t border-r border-b transition-colors cursor-pointer ${mobileTab === 'preview' ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100' : 'bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700'}`}
+              >Preview</button>
+            </div>
+          )}
+
+          {/* Write/Preview toggle for tabbed layouts */}
+          {activeNote && isTabbedLayout && (
+            <div className="flex shrink-0 mr-3">
+              <button type="button" onClick={() => setEditorTab('edit')}
+                className={`px-3 h-8 text-xs font-medium rounded-l-md border transition-colors cursor-pointer ${editorTab === 'edit' ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100' : 'bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700'}`}
+              >Write</button>
+              <button type="button" onClick={() => setEditorTab('preview')}
+                className={`px-3 h-8 text-xs font-medium rounded-r-md border-t border-r border-b transition-colors cursor-pointer ${editorTab === 'preview' ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-900 dark:border-zinc-100' : 'bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700'}`}
+              >Preview</button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Pane container ── */}
+        <div className="flex-1 flex min-w-0 h-full overflow-hidden bg-white dark:bg-zinc-950">
+
+          {/* Editor pane */}
+          {showEditorDesktop && (
+            <div className={`h-full min-w-0 ${
+              isSplitLayout
+                ? showEditorMobile ? 'flex flex-1' : 'hidden lg:flex lg:flex-1'
+                : 'flex flex-1'
+            }`}>
               <Editor
                 note={activeNote}
                 onUpdateNote={handleUpdateNote}
                 onExportMarkdown={handleExportMarkdown}
                 onExportHTML={handleExportHTML}
                 isSidebarOpen={isSidebarOpen}
-                onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+                onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
                 layout={layout}
                 editorTab={editorTab}
                 onChangeEditorTab={setEditorTab}
                 layoutSelector={layoutSelectorElement}
                 editorFontSize={editorFontSize}
-                onChangeFontSize={setEditorFontSize}
                 isFocusMode={isFocusMode}
                 onToggleFocusMode={() => setIsFocusMode(v => !v)}
                 wordGoal={activeNote?.wordGoal || 0}
                 vimMode={vimMode}
-                onToggleVimMode={() => setVimMode(v => !v)}
                 charLimit={charLimit}
               />
             </div>
           )}
 
-          {/* Column 3: The Live Preview Pane */}
-          {(layout !== 'sidebar_tabs' && layout !== 'tabs_sidebar' && layout !== 'zen' || editorTab === 'preview') && (
-            <div
-              className={`flex-1 h-full min-w-0 ${
-                layout === 'editor_only' || layout === 'zen_editor' ? 'hidden' : (layout === 'default' || layout === 'split_sidebar' || layout === 'zen_split') ? (mobileTab === 'preview' ? 'flex' : 'hidden lg:flex') : 'flex'
-              }`}
-            >
+          {/* Preview pane */}
+          {showPreviewDesktop && (
+            <div className={`h-full min-w-0 ${
+              isSplitLayout
+                ? showPreviewMobile ? 'flex flex-1' : 'hidden lg:flex lg:flex-1'
+                : 'flex flex-1'
+            }`}>
               <Preview
                 title={activeNote ? activeNote.title : ''}
                 content={activeNote ? activeNote.content : ''}
                 layout={layout}
                 editorTab={editorTab}
                 onChangeEditorTab={setEditorTab}
-                layoutSelector={layout === 'zen_split' ? null : layoutSelectorElement}
+                layoutSelector={layoutSelectorElement}
                 isSidebarOpen={isSidebarOpen}
-                onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+                onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
                 hasNote={activeNote !== null}
                 onExportMarkdown={handleExportMarkdown}
                 previewRef={setPreviewContentRef}
                 isEditorVisible={
-                  layout !== 'preview_only' && 
-                  layout !== 'zen_preview' && 
-                  (layout !== 'sidebar_tabs' && layout !== 'tabs_sidebar' && layout !== 'zen' || editorTab === 'edit') && 
-                  !((layout === 'default' || layout === 'split_sidebar' || layout === 'zen_split') && mobileTab !== 'edit')
+                  showEditorDesktop &&
+                  (!isSplitLayout || mobileTab === 'edit')
                 }
               />
             </div>
@@ -685,44 +748,14 @@ ${previewEl.innerHTML}
         </div>
       </div>
 
-      {/* Column 1: Document Explorer (Sidebar) - Right position */}
-      {(layout === 'tabs_sidebar' || layout === 'split_sidebar') && (
-        <Sidebar
-          notes={notes}
-          activeNoteId={activeNoteId}
-          onSelectNote={handleSelectNote}
-          onCreateNote={triggerNamingModal}
-          onDeleteNote={handleDeleteNote}
-          onDuplicateNote={handleDuplicateNote}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          onRenameNote={(id, title) => {
-            setRenameNoteId(id)
-            setRenameTitle((title || '').replace(/\.md$/i, ''))
-          }}
-          isSidebarOpen={isSidebarOpen}
-          layoutSelector={layoutSelectorSidebar}
-          onOpenCheatsheet={() => setIsCheatsheetOpen(true)}
-          onOpenSettings={() => setShowGistSettings(true)}
-          layout={layout}
-          onReorderNotes={handleReorderNotes}
-          onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
-          onImportMarkdown={handleImportMarkdown}
-          onTogglePin={handleTogglePin}
-          onOpenTemplates={() => setIsTemplatesOpen(true)}
-          onOpenShortcuts={() => setIsShortcutsOpen(true)}
-          onOpenSearch={() => setIsSearchOpen(true)}
-          onExportAll={handleExportAllNotes}
-          tagFilter={tagFilter}
-          onSetTagFilter={setTagFilter}
-        />
-      )}
+      {/* Sidebar — right position */}
+      {hasSidebar && isSidebarRight && <Sidebar {...sidebarProps} />}
 
       {/* Feature #15: localStorage quota warning toast */}
       {showQuotaWarning && (
         <div
           role="alert"
-            className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-red-600 text-white text-sm font-medium px-4 py-3 rounded-lg max-w-sm w-[90vw]"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-red-600 text-white text-sm font-medium px-4 py-3 rounded-lg shadow-lg max-w-sm w-[90vw]"
         >
           <span className="flex-1">⚠️ Storage full — export your notes to avoid losing data.</span>
           <button
@@ -738,6 +771,13 @@ ${previewEl.innerHTML}
           >✕</button>
         </div>
       )}
+
+      <ExportNotesDialog
+        open={isExportModalOpen}
+        onOpenChange={setIsExportModalOpen}
+        notes={notes}
+        onToast={toast}
+      />
 
       <CreateNoteDialog
         open={isNamingModalOpen}
