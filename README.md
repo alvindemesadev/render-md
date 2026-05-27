@@ -2,8 +2,6 @@
 
 A distraction-free **Markdown editor** with live preview, built for developers and writers. Everything saves automatically to your browser — no account, no server, no setup required.
 
-![RenderMD](src/assets/hero.png)
-
 ---
 
 ## Features
