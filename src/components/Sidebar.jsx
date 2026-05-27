@@ -93,7 +93,7 @@ function NoteItem({ note, isActive, index, onSelect, onDuplicate, onRename, onDe
               aria-hidden="true"
             />
             <span className={`font-medium text-sm truncate ${isActive ? 'text-zinc-900 dark:text-white' : 'text-zinc-700 dark:text-zinc-300'}`}>
-              {note.title.replace(/\.md$/i, '') || 'Untitled'}
+              {(note.title || '').replace(/\.md$/i, '') || 'Untitled'}
             </span>
             {note.pinned && <Pin className="w-3 h-3 shrink-0 text-zinc-400 dark:text-zinc-500" aria-label="Pinned" />}
           </div>

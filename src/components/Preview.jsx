@@ -106,7 +106,7 @@ ${previewEl.innerHTML}
             <div className="flex items-center gap-2 overflow-hidden min-w-0 shrink-0">
               <span className="text-zinc-500 dark:text-zinc-400 font-semibold text-xs tracking-wide uppercase font-mono hidden sm:inline shrink-0">Preview:</span>
               <span className="text-zinc-900 dark:text-white font-semibold text-base truncate">
-                {title.replace(/\.md$/i, '') || 'Untitled'}
+                {(title || '').replace(/\.md$/i, '') || 'Untitled'}
               </span>
             </div>
           ) : (

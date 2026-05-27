@@ -421,7 +421,7 @@ export default function App() {
       const files = {}
       const usedFilenames = new Set()
       notes.forEach(note => {
-        let base = note.title.replace(/[^a-zA-Z0-9._-]/g, '_') || 'untitled'
+        let base = (note.title || '').replace(/[^a-zA-Z0-9._-]/g, '_') || 'untitled'
         let filename = `${base}.md`
         let counter = 1
         while (usedFilenames.has(filename)) {
@@ -574,7 +574,7 @@ ${previewEl.innerHTML}
           onToggleTheme={toggleTheme}
           onRenameNote={(id, title) => {
             setRenameNoteId(id)
-            setRenameTitle(title.replace(/\.md$/i, ''))
+            setRenameTitle((title || '').replace(/\.md$/i, ''))
           }}
           isSidebarOpen={isSidebarOpen}
           layoutSelector={layoutSelectorSidebar}
@@ -698,7 +698,7 @@ ${previewEl.innerHTML}
           onToggleTheme={toggleTheme}
           onRenameNote={(id, title) => {
             setRenameNoteId(id)
-            setRenameTitle(title.replace(/\.md$/i, ''))
+            setRenameTitle((title || '').replace(/\.md$/i, ''))
           }}
           isSidebarOpen={isSidebarOpen}
           layoutSelector={layoutSelectorSidebar}
@@ -870,3 +870,4 @@ ${previewEl.innerHTML}
     </div>
   )
 }
+

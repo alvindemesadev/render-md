@@ -121,17 +121,19 @@ export function Editor({
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  // CodeMirror onChange
+  // CodeMirror onChange — guard against note being null during unmount
   const handleCMChange = useCallback((val) => {
+    if (!note?.id) return
     onUpdateNote(note.id, { content: val })
-  }, [note.id, onUpdateNote])
+  }, [note?.id, onUpdateNote])
 
 
 
 
   // Feature #25: restore snapshot
   const handleRestoreSnapshot = (content) => {
-    if (note) saveSnapshot(note.id, note.content)
+    if (!note) return
+    saveSnapshot(note.id, note.content)
     onUpdateNote(note.id, { content })
     setShowHistory(false)
   }
@@ -342,7 +344,7 @@ export function Editor({
               </Button>
             )}
             <h2 className="text-zinc-900 dark:text-white font-semibold text-base truncate select-none tracking-tight max-w-[140px] md:max-w-xs">
-              {note.title.replace(/\.md$/i, '') || 'Untitled'}
+              {(note.title || '').replace(/\.md$/i, '') || 'Untitled'}
             </h2>
             {(layout === 'sidebar_tabs' || layout === 'tabs_sidebar' || layout === 'zen') && (
               <div className="flex bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-lg text-xs font-semibold shrink-0 border border-zinc-200 dark:border-zinc-700">
