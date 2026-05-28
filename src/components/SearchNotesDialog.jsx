@@ -82,7 +82,7 @@ export function SearchNotesDialog({ open, onOpenChange, notes, onSelectNote }) {
                 </span>
               </div>
               {note.content && (
-                <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5 truncate pl-5.5">
+                <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5 truncate pl-6">
                   {getSnippet(note.content, query)}
                 </p>
               )}

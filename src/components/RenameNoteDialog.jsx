@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from './ui/button'
 import {
   Dialog,
@@ -11,6 +11,11 @@ import {
 
 export function RenameNoteDialog({ noteId, currentTitle, onOpenChange, onRename }) {
   const [title, setTitle] = useState(currentTitle || '')
+
+  // Sync title when the dialog opens for a different note
+  useEffect(() => {
+    setTitle(currentTitle || '')
+  }, [currentTitle, noteId])
 
   const handleRename = () => {
     if (noteId) onRename(noteId, title)

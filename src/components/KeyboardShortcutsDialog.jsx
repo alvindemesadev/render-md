@@ -25,7 +25,6 @@ const SHORTCUTS = [
     { combo: 'Escape', desc: 'Close panel / Exit focus mode' },
   ]},
   { category: 'View', keys: [
-    { combo: 'Ctrl+Shift+K', desc: 'Code block (markdown)' },
     { combo: '?', desc: 'Show keyboard shortcuts' },
   ]},
 ]
