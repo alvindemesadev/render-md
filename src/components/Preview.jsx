@@ -8,6 +8,7 @@ import { Download, FileCode, PanelLeftClose, PanelLeftOpen, PanelRightClose, Pan
 import { Button } from './ui/button'
 import { useDarkMode } from '../lib/utils'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { MermaidDiagram } from './MermaidDiagram'
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 const sanitizeSchema = {
@@ -20,6 +21,8 @@ const sanitizeSchema = {
     img:  [...(defaultSchema.attributes?.img  ?? []), 'loading'],
     input: ['type', 'checked', 'disabled', 'readOnly'],
   },
+  // Allow SVG elements that Mermaid generates (rendered via dangerouslySetInnerHTML, not through rehype)
+  tagNames: [...(defaultSchema.tagNames ?? [])],
 }
 
 // GitHub-style preview — fixed theme, respects app dark/light mode
@@ -188,6 +191,12 @@ ${previewEl.innerHTML}
                 code: ({ className, children, ...props }) => {
                   const match = /language-(\w+)/.exec(className || '')
                   const language = match ? match[1] : null
+
+                  // Mermaid diagrams — render as SVG
+                  if (language === 'mermaid') {
+                    return <MermaidDiagram code={String(children).replace(/\n$/, '')} />
+                  }
+
                   if (language) {
                     return (
                       <SyntaxHighlighter
