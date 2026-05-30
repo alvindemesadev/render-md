@@ -133,6 +133,19 @@ export function Editor({
 
   const isDark = useDarkMode()
 
+  const handleInsertText = useCallback((text) => {
+    const view = cmRef.current?.view
+    if (!view) return
+    const { state, dispatch } = view
+    const mainRange = state.selection.main
+    dispatch(state.update({
+      changes: { from: mainRange.from, to: mainRange.to, insert: text },
+      selection: { anchor: mainRange.from + text.length },
+      scrollIntoView: true
+    }))
+    view.focus()
+  }, [])
+
   // Feature #6: Ctrl+F opens Find & Replace
   useEffect(() => {
     const handler = (e) => {
@@ -577,6 +590,7 @@ export function Editor({
         {isCheatsheetOpen && (
           <CheatsheetPanel
             onClose={onCloseCheatsheet}
+            onInsertText={handleInsertText}
           />
         )}
       </div>

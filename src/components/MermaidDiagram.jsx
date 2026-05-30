@@ -18,7 +18,7 @@ let diagramCounter = 0
 // Global in-memory cache for rendered SVG strings
 const renderCache = new Map()
 
-export function MermaidDiagram({ code }) {
+export function MermaidDiagram({ code, isDark: propIsDark }) {
   const [debouncedCode, setDebouncedCode] = useState(code)
   const [svgHtml, setSvgHtml] = useState(null)
   const [error, setError] = useState(null)
@@ -32,7 +32,8 @@ export function MermaidDiagram({ code }) {
   const dragStart = useRef({ x: 0, y: 0 })
 
   const [copied, setCopied] = useState(false)
-  const isDark = useDarkMode()
+  const hookIsDark = useDarkMode()
+  const isDark = propIsDark !== undefined ? propIsDark : hookIsDark
 
   // Debounce diagram updates by 300ms to avoid typing performance lag
   useEffect(() => {

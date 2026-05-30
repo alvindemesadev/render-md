@@ -715,6 +715,7 @@ export default function App() {
                   showEditorDesktop &&
                   (!isSplitLayout || mobileTab === 'edit')
                 }
+                theme={theme}
               />
             </div>
           )}

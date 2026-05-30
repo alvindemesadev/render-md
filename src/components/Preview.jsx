@@ -32,12 +32,12 @@ const GITHUB_CODE_BG = 'bg-[rgba(175,184,193,0.2)] dark:bg-[rgba(110,118,129,0.4
 export function Preview({
   title, content, layout, editorTab, onChangeEditorTab, layoutSelector,
   isSidebarOpen, onToggleSidebar, hasNote, onExportMarkdown, isEditorVisible,
-  previewRef,
+  previewRef, theme,
 }) {
   const previewScrollRef = useRef(null)
   const [debouncedContent, setDebouncedContent] = useState(content)
 
-  const isDark = useDarkMode()
+  const isDark = theme ? theme === 'dark' : useDarkMode()
 
   const isLeftSidebarLayout = layout === 'default' || layout === 'sidebar_tabs' || layout === 'editor_only' || layout === 'preview_only'
 
@@ -171,7 +171,8 @@ export function Preview({
 
                   // Mermaid diagrams — render as SVG
                   if (language === 'mermaid') {
-                    return <MermaidDiagram code={String(children).replace(/\n$/, '')} />
+                    const codeString = String(children).replace(/\n$/, '')
+                    return <MermaidDiagram key={`${isDark ? 'dark' : 'light'}-${codeString}`} code={codeString} isDark={isDark} />
                   }
 
                   if (language) {
