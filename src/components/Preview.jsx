@@ -6,7 +6,7 @@ import rehypeRaw from 'rehype-raw'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import { Download, FileCode, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import { Button } from './ui/button'
-import { useDarkMode } from '../lib/utils'
+import { useDarkMode, exportToHTML } from '../lib/utils'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { MermaidDiagram } from './MermaidDiagram'
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -54,60 +54,9 @@ export function Preview({
     if (!debouncedContent) return
     const previewEl = previewScrollRef.current?.querySelector('article')
     if (!previewEl) return
-    
-    // Clean up elements that shouldn't be exported
-    const clone = previewEl.cloneNode(true)
-    clone.querySelectorAll('.no-export').forEach(el => el.remove())
-
-    const isHtmlDark = isDark
-
-    const html = `<!DOCTYPE html>
-<html lang="en" class="${isHtmlDark ? 'dark' : ''}">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${title || 'Exported Note'}</title>
-<style>
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
-    max-width: 800px;
-    margin: 40px auto;
-    padding: 0 20px;
-    line-height: 1.6;
-    color: ${isHtmlDark ? '#e4e4e7' : '#24292f'};
-    background-color: ${isHtmlDark ? '#09090b' : '#ffffff'};
-    transition: background-color 0.2s, color 0.2s;
+    exportToHTML(title, previewEl)
   }
-  h1,h2,h3,h4,h5,h6 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: ${isHtmlDark ? '#ffffff' : '#09090b'}; }
-  h1,h2 { border-bottom: 1px solid ${isHtmlDark ? '#27272a' : '#d0d7de'}; padding-bottom: 0.3em; }
-  code { background: ${isHtmlDark ? 'rgba(110,118,129,0.4)' : 'rgba(175,184,193,0.2)'}; padding: 0.2em 0.4em; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 85%; }
-  pre { background: ${isHtmlDark ? '#161618' : '#f6f8fa'}; color: ${isHtmlDark ? '#e4e4e7' : '#24292f'}; border: 1px solid ${isHtmlDark ? '#27272a' : '#d0d7de'}; padding: 16px; border-radius: 8px; overflow-x: auto; }
-  pre code { background: none; padding: 0; }
-  blockquote { border-left: 4px solid ${isHtmlDark ? '#52525b' : '#d0d7de'}; margin: 0; padding: 0 1em; color: ${isHtmlDark ? '#a1a1aa' : '#57606a'}; background-color: ${isHtmlDark ? 'rgba(39,39,42,0.3)' : '#f6f8fa'}; border-radius: 0 4px 4px 0; }
-  table { border-collapse: collapse; width: 100%; margin: 24px 0; }
-  th,td { border: 1px solid ${isHtmlDark ? '#27272a' : '#d0d7de'}; padding: 8px 12px; }
-  th { background: ${isHtmlDark ? '#161618' : '#f6f8fa'}; color: ${isHtmlDark ? '#ffffff' : '#24292f'}; }
-  tr:nth-child(even) { background-color: ${isHtmlDark ? 'rgba(39,39,42,0.15)' : '#fafafa'}; }
-  a { color: ${isHtmlDark ? '#58a6ff' : '#0969da'}; text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  img { max-width: 100%; }
-  svg { display: block; max-width: 100%; height: auto; margin: 24px auto; }
-</style>
-</head>
-<body>
-${clone.innerHTML}
-</body>
-</html>`
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${(title || 'note').replace(/\.md$/i, '')}.html`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
+
 
   // Feature #13: Export as PDF removed
 

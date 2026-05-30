@@ -8,6 +8,7 @@ import { Button } from './ui/button'
 import { FindReplace } from './FindReplace'
 import { TocPanel } from './TocPanel'
 import { VersionHistoryPanel } from './VersionHistoryPanel'
+import { CheatsheetPanel } from './CheatsheetPanel'
 import { useVersionHistory } from '../hooks/useVersionHistory'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
@@ -79,6 +80,8 @@ export function Editor({
   wordGoal,
   vimMode,
   charLimit,
+  isCheatsheetOpen,
+  onCloseCheatsheet,
 }) {
   const isLeftSidebarLayout = layout === 'default' || layout === 'sidebar_tabs' || layout === 'editor_only' || layout === 'preview_only'
   const isRightSidebarLayout = layout === 'tabs_sidebar' || layout === 'split_sidebar'
@@ -89,8 +92,17 @@ export function Editor({
   const [showFindReplace, setShowFindReplace] = useState(false)
   const [showToc, setShowToc] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
-  
+
+  // Sync right side panels: cheatsheet opens -> close others
+  useEffect(() => {
+    if (isCheatsheetOpen) {
+      setShowToc(false)
+      setShowHistory(false)
+    }
+  }, [isCheatsheetOpen])
+
   const [newTagInput, setNewTagInput] = useState('')
+
 
   const handleRemoveTag = useCallback((tagToRemove) => {
     if (!note) return
@@ -303,6 +315,15 @@ export function Editor({
       '.cm-scroller': {
         fontFamily: getFontFamilyStack(editorFontFamily) + ' !important',
       },
+      '.cm-foldGutter': {
+        width: '14px',
+        color: 'currentColor',
+        opacity: '0.4',
+        transition: 'opacity 0.15s',
+      },
+      '.cm-foldGutter:hover': {
+        opacity: '0.8',
+      },
     }),
     formattingKeymap,
     keymap.of([indentWithTab]),
@@ -358,11 +379,11 @@ export function Editor({
     : null
 
   return (
-    <section className="flex-1 flex flex-col h-full bg-white dark:bg-zinc-950 border-r border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200">
+    <section className="flex-1 flex flex-col h-full bg-white dark:bg-zinc-950 glass-border-r text-zinc-800 dark:text-zinc-200">
 
       {/* Header — hidden in focus mode AND on mobile (mobile top bar handles it) */}
       {!isFocusMode && (
-        <div className="hidden lg:flex h-16 px-4 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 items-center justify-between shrink-0 gap-2">
+        <div className="hidden lg:flex h-16 px-4 glass-border-b glassmorphism items-center justify-between shrink-0 gap-2 z-10">
           <div className="flex items-center min-w-0 gap-2 flex-1">
             {isLeftSidebarLayout && (
               <Button variant="ghost" size="icon" onClick={onToggleSidebar}
@@ -392,7 +413,7 @@ export function Editor({
             {layoutSelector}
 
             <Button type="button" variant="ghost" size="icon"
-              onClick={() => { setShowToc(v => !v); setShowHistory(false) }}
+              onClick={() => { setShowToc(v => !v); setShowHistory(false); if (onCloseCheatsheet) onCloseCheatsheet() }}
               aria-label="Toggle table of contents" aria-pressed={showToc}
               title="Table of Contents"
               className={`w-8 h-8 rounded-md cursor-pointer transition-colors ${showToc ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
@@ -400,7 +421,7 @@ export function Editor({
             </Button>
 
             <Button type="button" variant="ghost" size="icon"
-              onClick={() => { setShowHistory(v => !v); setShowToc(false) }}
+              onClick={() => { setShowHistory(v => !v); setShowToc(false); if (onCloseCheatsheet) onCloseCheatsheet() }}
               aria-label="Toggle version history" aria-pressed={showHistory}
               title="Version History"
               className={`w-8 h-8 rounded-md cursor-pointer transition-colors ${showHistory ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
@@ -507,7 +528,7 @@ export function Editor({
               theme={theme === 'dark' ? darkEditorTheme : lightEditorTheme}
               basicSetup={{
                 lineNumbers: true,
-                foldGutter: false,
+                foldGutter: true,
                 dropCursor: false,
                 drawSelection: true,
                 allowMultipleSelections: false,
@@ -521,7 +542,7 @@ export function Editor({
                 highlightSelectionMatches: false,
                 closeBracketsKeymap: false,
                 searchKeymap: false,
-                foldKeymap: false,
+                foldKeymap: true,
                 completionKeymap: false,
                 lintKeymap: false,
               }}
@@ -545,9 +566,17 @@ export function Editor({
         {showHistory && (
           <VersionHistoryPanel
             noteId={note.id}
+            currentContent={note.content}
             getSnapshots={getSnapshots}
             onRestore={handleRestoreSnapshot}
             onClose={() => setShowHistory(false)}
+          />
+        )}
+
+        {/* Collapsible Cheatsheet Panel */}
+        {isCheatsheetOpen && (
+          <CheatsheetPanel
+            onClose={onCloseCheatsheet}
           />
         )}
       </div>
@@ -583,17 +612,34 @@ export function Editor({
               </span>
             </span>
 
-            {goalProgress !== null && goalProgress < 100 && (
-              <div className="w-16 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                  style={{ width: `${goalProgress}%` }}
-                  role="progressbar"
-                  aria-valuenow={goalProgress}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label={`Word goal: ${goalProgress}%`}
-                />
+            {wordGoal > 0 && (
+              <div className="flex items-center gap-1.5" title={`Word Goal: ${wordCount}/${wordGoal} words (${goalProgress}%)`}>
+                <div className="relative w-4.5 h-4.5 flex items-center justify-center">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 20 20">
+                    <circle 
+                      cx="10" 
+                      cy="10" 
+                      r="8" 
+                      className="stroke-zinc-200 dark:stroke-zinc-800 fill-none" 
+                      strokeWidth="2.5" 
+                    />
+                    <circle 
+                      cx="10" 
+                      cy="10" 
+                      r="8" 
+                      className="stroke-emerald-500 fill-none transition-all duration-300" 
+                      strokeWidth="2.5"
+                      strokeDasharray={2 * Math.PI * 8}
+                      strokeDashoffset={2 * Math.PI * 8 * (1 - Math.min(100, goalProgress || 0) / 100)} 
+                    />
+                  </svg>
+                  {goalProgress !== null && goalProgress >= 100 && (
+                    <span className="absolute inset-0 flex items-center justify-center text-[8px] text-emerald-500 font-bold">✓</span>
+                  )}
+                </div>
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">
+                  {goalProgress}%
+                </span>
               </div>
             )}
           </div>

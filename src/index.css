@@ -292,3 +292,91 @@ input[type="submit"],
 .cm-editor .cm-content ::-moz-selection {
   background-color: transparent !important;
 }
+
+/* Glassmorphism Styles */
+.glassmorphism {
+  background-color: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+}
+
+.dark .glassmorphism {
+  background-color: rgba(9, 9, 11, 0.65) !important;
+}
+
+/* Glass Borders */
+.glass-border-r {
+  border-right: 1px solid rgba(228, 228, 231, 0.4) !important;
+}
+.dark .glass-border-r {
+  border-right: 1px solid rgba(39, 39, 42, 0.3) !important;
+}
+
+.glass-border-l {
+  border-left: 1px solid rgba(228, 228, 231, 0.4) !important;
+}
+.dark .glass-border-l {
+  border-left: 1px solid rgba(39, 39, 42, 0.3) !important;
+}
+
+.glass-border-b {
+  border-bottom: 1px solid rgba(228, 228, 231, 0.4) !important;
+}
+.dark .glass-border-b {
+  border-bottom: 1px solid rgba(39, 39, 42, 0.3) !important;
+}
+
+.glass-border-t {
+  border-top: 1px solid rgba(228, 228, 231, 0.4) !important;
+}
+.dark .glass-border-t {
+  border-top: 1px solid rgba(39, 39, 42, 0.3) !important;
+}
+
+/* Diff highlights for Version History Panel */
+.diff-line {
+  display: flex;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  padding: 1px 4px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.diff-line-added {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+.dark .diff-line-added {
+  background-color: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+}
+
+.diff-line-removed {
+  background-color: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  text-decoration: line-through;
+}
+.dark .diff-line-removed {
+  background-color: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  text-decoration: line-through;
+}
+
+.diff-line-unchanged {
+  color: #71717a;
+}
+.dark .diff-line-unchanged {
+  color: #a1a1aa;
+}
+
+.diff-line-ellipsis {
+  color: #a1a1aa;
+  font-style: italic;
+  padding-left: 12px;
+}
+.dark .diff-line-ellipsis {
+  color: #71717a;
+}
+
