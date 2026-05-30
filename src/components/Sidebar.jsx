@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Plus, Trash2, FileText, Sun, Moon, Pencil, BookOpen, Copy, Search, X, Settings, GripVertical, Upload, Pin, PinOff, Command, Download, LayoutTemplate } from 'lucide-react'
+import { Plus, Trash2, FileText, Sun, Moon, Pencil, BookOpen, Copy, Search, X, Settings, GripVertical, Upload, Pin, PinOff, Command, Download, LayoutTemplate, Keyboard } from 'lucide-react'
 import { Button } from './ui/button'
 import { useDarkMode, getRelativeTime } from '../lib/utils'
 import {
@@ -317,14 +317,25 @@ export function Sidebar({
 
       {/* New Note Button */}
       <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 shrink-0 flex flex-col gap-1.5">
-        <Button
-          type="button"
-          onClick={onCreateNote}
-          className="w-full bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300 transition-colors font-medium flex items-center justify-center gap-2 rounded-md h-9 cursor-pointer text-sm"
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
-          <span>New Note</span>
-        </Button>
+        <div className="flex gap-1.5">
+          <Button
+            type="button"
+            onClick={onCreateNote}
+            className="flex-1 bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300 transition-colors font-medium flex items-center justify-center gap-2 rounded-md h-9 cursor-pointer text-sm"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" aria-hidden="true" />
+            <span>New Note</span>
+          </Button>
+          <Button
+            type="button"
+            onClick={onOpenTemplates}
+            title="New from Template"
+            aria-label="New from Template"
+            className="w-9 h-9 p-0 bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-650 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center rounded-md shrink-0 cursor-pointer transition-colors"
+          >
+            <LayoutTemplate className="w-4 h-4" />
+          </Button>
+        </div>
         <input ref={importInputRef} type="file" accept=".md,.markdown,text/markdown,text/plain"
           multiple className="hidden" onChange={handleImportFiles} aria-label="Import markdown files" />
         <Button
@@ -340,7 +351,7 @@ export function Sidebar({
 
       {/* Search / Filter */}
       <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
-        <div className="relative">
+        <div className="relative flex items-center">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 pointer-events-none" aria-hidden="true" />
           <input
             ref={searchInputRef}
@@ -356,18 +367,29 @@ export function Sidebar({
               }
               if (e.key === 'Escape') setSearchQuery('')
             }}
-            className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md pl-8 pr-7 py-1.5 text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-colors"
+            className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md pl-8 pr-14 py-1.5 text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-colors"
           />
-          {searchQuery && (
+          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+                className="text-zinc-450 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer p-0.5 rounded"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setSearchQuery('')}
-              aria-label="Clear search"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+              onClick={onOpenSearch}
+              title="Advanced Full-Text Search"
+              aria-label="Advanced Full-Text Search"
+              className="text-zinc-450 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-805 transition-colors"
             >
-              <X className="w-3 h-3" />
+              <Command className="w-3.5 h-3.5" />
             </button>
-          )}
+          </div>
         </div>
       </div>
 
@@ -419,61 +441,53 @@ export function Sidebar({
       </DndContext>
 
       {/* Sidebar Footer */}
-      <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 shrink-0 flex flex-col gap-1.5">
+      <div className="h-12 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/40 shrink-0 flex items-center justify-between px-3 select-none">
         <Button
           type="button"
           variant="ghost"
-          onClick={onOpenTemplates}
-          className="w-full justify-start gap-2 px-3 h-8 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900 cursor-pointer transition-colors rounded-md"
-        >
-          <LayoutTemplate className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-          <span>New from Template</span>
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onOpenCheatsheet}
-          className="w-full justify-start gap-2 px-3 h-8 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900 cursor-pointer transition-colors rounded-md"
-        >
-          <BookOpen className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-          <span>Markdown Cheatsheet</span>
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onOpenShortcuts}
-          className="w-full justify-start gap-2 px-3 h-8 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900 cursor-pointer transition-colors rounded-md"
-        >
-          <Command className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-          <span>Keyboard Shortcuts</span>
-        </Button>
-        {layoutSelector}
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onOpenSearch}
-          className="w-full justify-start gap-2 px-3 h-8 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900 cursor-pointer transition-colors rounded-md"
-        >
-          <Search className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-          <span>Search All Notes</span>
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onExportAll}
-          className="w-full justify-start gap-2 px-3 h-8 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900 cursor-pointer transition-colors rounded-md"
-        >
-          <Download className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-          <span>Export All Notes</span>
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
+          size="icon"
           onClick={onOpenSettings}
-          className="w-full justify-start gap-2 px-3 h-8 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900 cursor-pointer transition-colors rounded-md"
+          title="Settings"
+          aria-label="Settings"
+          className="w-8 h-8 rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
         >
-          <Settings className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-          <span>Settings</span>
+          <Settings className="w-4 h-4" />
+        </Button>
+        
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onOpenCheatsheet}
+          title="Markdown Cheatsheet"
+          aria-label="Markdown Cheatsheet"
+          className="w-8 h-8 rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
+        >
+          <BookOpen className="w-4 h-4" />
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onOpenShortcuts}
+          title="Keyboard Shortcuts"
+          aria-label="Keyboard Shortcuts"
+          className="w-8 h-8 rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
+        >
+          <Keyboard className="w-4 h-4" />
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onExportAll}
+          title="Export All Notes"
+          aria-label="Export All Notes"
+          className="w-8 h-8 rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
+        >
+          <Download className="w-4 h-4" />
         </Button>
       </div>
 
