@@ -71,7 +71,7 @@ export function CheatsheetPanel({ onClose, onInsertText }) {
               type="button"
               onClick={() => setSearchQuery('')}
               aria-label="Clear search"
-              className="absolute right-2.5 p-0.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-200 cursor-pointer transition-colors"
+              className="absolute right-2.5 p-0.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer transition-colors"
             >
               <X className="w-3 h-3" />
             </button>
@@ -135,7 +135,7 @@ export function CheatsheetPanel({ onClose, onInsertText }) {
                 </div>
               ))
             ) : (
-              <div className="p-4 text-center text-zinc-450 dark:text-zinc-500 select-none">
+              <div className="p-4 text-center text-zinc-400 dark:text-zinc-500 select-none">
                 No matching syntax found.
               </div>
             )}

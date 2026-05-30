@@ -53,7 +53,7 @@ export function TemplatesDialog({ open, onOpenChange, onCreateFromTemplate }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 sm:max-w-3xl h-[520px] flex flex-col rounded-lg p-5">
+      <DialogContent className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 sm:max-w-5xl h-[680px] flex flex-col rounded-lg p-5">
         <DialogHeader className="shrink-0 mb-3">
           <DialogTitle className="text-zinc-900 dark:text-white">New from Template</DialogTitle>
           <DialogDescription className="text-zinc-500 dark:text-zinc-400">
@@ -65,7 +65,7 @@ export function TemplatesDialog({ open, onOpenChange, onCreateFromTemplate }) {
         <div className="flex-1 flex min-h-0 divide-zinc-200 dark:divide-zinc-800 gap-4 mb-4 overflow-hidden sm:divide-x">
           
           {/* Left Panel: Templates List */}
-          <div className="w-full sm:w-1/3 flex flex-col gap-1 sm:pr-2 overflow-y-auto custom-scrollbar select-none">
+          <div className="w-full sm:w-1/4 flex flex-col gap-1 sm:pr-2 overflow-y-auto custom-scrollbar select-none">
             {NOTE_TEMPLATES.map((tpl) => {
               const isSelected = selectedTemplate?.name === tpl.name
               return (
@@ -73,10 +73,10 @@ export function TemplatesDialog({ open, onOpenChange, onCreateFromTemplate }) {
                   key={tpl.name}
                   type="button"
                   onClick={() => setSelectedTemplate(tpl)}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors cursor-pointer text-xs font-semibold focus-visible:outline-2 focus-visible:outline-zinc-450 ${
+                  className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors cursor-pointer text-xs font-semibold focus-visible:outline-2 focus-visible:outline-zinc-400 ${
                     isSelected
                       ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold'
-                      : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-350 hover:text-zinc-900 dark:hover:text-white'
+                      : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -93,7 +93,7 @@ export function TemplatesDialog({ open, onOpenChange, onCreateFromTemplate }) {
             <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider font-mono mb-2 block select-none">
               Template Preview
             </span>
-            <div className="flex-1 overflow-auto rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-6 text-zinc-800 dark:text-zinc-305 select-text custom-scrollbar markdown-preview text-left">
+            <div className="flex-1 overflow-auto rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-6 text-zinc-800 dark:text-zinc-300 select-text custom-scrollbar markdown-preview text-left">
               <article className="max-w-none space-y-4 text-xs leading-relaxed">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm, remarkGemoji]}
@@ -113,7 +113,7 @@ export function TemplatesDialog({ open, onOpenChange, onCreateFromTemplate }) {
                     ),
                     thead: (props) => <thead {...props} className="bg-zinc-100 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 font-semibold" />,
                     th: (props) => <th {...props} className="px-3 py-2 font-semibold border-r border-zinc-200 dark:border-zinc-800 last:border-r-0" />,
-                    td: (props) => <td {...props} className="px-3 py-1.5 border-t border-zinc-200 dark:border-zinc-800 border-r border-zinc-200 dark:border-zinc-800 last:border-r-0 text-zinc-650 dark:text-zinc-450" />,
+                    td: (props) => <td {...props} className="px-3 py-1.5 border-t border-zinc-200 dark:border-zinc-800 border-r border-zinc-200 dark:border-zinc-800 last:border-r-0 text-zinc-600 dark:text-zinc-400" />,
                     tr: (props) => <tr {...props} className="hover:bg-zinc-100/40 dark:hover:bg-zinc-900/40 odd:bg-white dark:odd:bg-zinc-950 even:bg-zinc-50/50 dark:even:bg-zinc-900/20 transition-colors" />,
                     pre: (props) => <pre {...props} className="my-4" />,
                     code: ({ className, children, ...props }) => {
@@ -144,7 +144,7 @@ export function TemplatesDialog({ open, onOpenChange, onCreateFromTemplate }) {
                         )
                       }
                       return (
-                        <code className={`${GITHUB_CODE_BG} px-1.2 py-0.4 rounded font-mono text-[85%] break-words`} {...props}>{children}</code>
+                        <code className={`${GITHUB_CODE_BG} px-1.5 py-0.5 rounded font-mono text-[85%] break-words`} {...props}>{children}</code>
                       )
                     },
                     input: (props) => {
@@ -163,7 +163,7 @@ export function TemplatesDialog({ open, onOpenChange, onCreateFromTemplate }) {
                     h4: (props) => <h4 {...props} className="text-sm font-semibold mt-3 mb-1.5 tracking-tight" />,
                     h5: (props) => <h5 {...props} className="text-xs font-semibold mt-3 mb-1 tracking-tight" />,
                     h6: (props) => <h6 {...props} className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mt-2 mb-1 tracking-tight" />,
-                    blockquote: (props) => <blockquote {...props} className="border-l-4 border-zinc-300 dark:border-zinc-700 bg-zinc-150/40 dark:bg-zinc-900/30 italic px-3.5 py-2 my-3 rounded-r-md text-zinc-650 dark:text-zinc-450 font-light leading-relaxed text-xs" />,
+                    blockquote: (props) => <blockquote {...props} className="border-l-4 border-zinc-300 dark:border-zinc-700 bg-zinc-100/50 dark:bg-zinc-900/30 italic px-3.5 py-2 my-3 rounded-r-md text-zinc-600 dark:text-zinc-400 font-light leading-relaxed text-xs" />,
                     p: (props) => <p {...props} className="my-2 leading-relaxed" />,
                     hr: (props) => <hr {...props} className="border-zinc-200 dark:border-zinc-800 my-6" />,
                     strong: (props) => <strong {...props} className="font-semibold" />,

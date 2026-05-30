@@ -67,6 +67,7 @@ export function MermaidDiagram({ code, isDark: propIsDark }) {
           theme: 'base',
           themeVariables: isDark
             ? {
+                darkMode: true,
                 primaryColor: '#27272a',
                 primaryTextColor: '#e4e4e7',
                 primaryBorderColor: '#52525b',
@@ -76,8 +77,15 @@ export function MermaidDiagram({ code, isDark: propIsDark }) {
                 nodeBorder: '#52525b',
                 edgeLabelBackground: '#09090b',
                 fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+                // Mindmap dark mode styles
+                mindmapLineColor: '#71717a',
+                mindmapTextColor: '#e4e4e7',
+                mindmapRootColor: '#27272a',
+                mindmapMainColor: '#27272a',
+                mindmapSecondaryColor: '#27272a',
               }
             : {
+                darkMode: false,
                 primaryColor: '#dbeafe',
                 primaryTextColor: '#1e3a5f',
                 primaryBorderColor: '#93c5fd',
@@ -87,7 +95,40 @@ export function MermaidDiagram({ code, isDark: propIsDark }) {
                 nodeBorder: '#93c5fd',
                 edgeLabelBackground: '#ffffff',
                 fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+                // Mindmap light mode styles
+                mindmapLineColor: '#6b7280',
+                mindmapTextColor: '#1e3a5f',
+                mindmapRootColor: '#dbeafe',
+                mindmapMainColor: '#f3f4f6',
+                mindmapSecondaryColor: '#ffffff',
               },
+          themeCSS: isDark
+            ? `
+              .edge, .branch-line, .mindmap-edge {
+                stroke: #71717a !important;
+                stroke-width: 2px !important;
+              }
+              .mindmap-node rect, .mindmap-node circle, .mindmap-node path, .mindmap-node ellipse {
+                fill: #27272a !important;
+                stroke: #52525b !important;
+              }
+              .mindmap-node text {
+                fill: #e4e4e7 !important;
+              }
+            `
+            : `
+              .edge, .branch-line, .mindmap-edge {
+                stroke: #6b7280 !important;
+                stroke-width: 2px !important;
+              }
+              .mindmap-node rect, .mindmap-node circle, .mindmap-node path, .mindmap-node ellipse {
+                fill: #dbeafe !important;
+                stroke: #93c5fd !important;
+              }
+              .mindmap-node text {
+                fill: #1e3a5f !important;
+              }
+            `,
           securityLevel: 'loose',
           flowchart: { useMaxWidth: false, htmlLabels: false, padding: 20 },
           sequence: { useMaxWidth: false },

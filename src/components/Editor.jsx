@@ -8,7 +8,7 @@ import { Button } from './ui/button'
 import { FindReplace } from './FindReplace'
 import { TocPanel } from './TocPanel'
 import { VersionHistoryPanel } from './VersionHistoryPanel'
-import { CheatsheetPanel } from './CheatsheetPanel'
+import { CheatsheetDialog } from './CheatsheetDialog'
 import { useVersionHistory } from '../hooks/useVersionHistory'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
@@ -586,13 +586,16 @@ export function Editor({
           />
         )}
 
-        {/* Collapsible Cheatsheet Panel */}
-        {isCheatsheetOpen && (
-          <CheatsheetPanel
-            onClose={onCloseCheatsheet}
-            onInsertText={handleInsertText}
-          />
-        )}
+        {/* Cheatsheet Dialog Modal */}
+        <CheatsheetDialog
+          open={isCheatsheetOpen}
+          onOpenChange={(open) => {
+            if (!open && onCloseCheatsheet) {
+              onCloseCheatsheet()
+            }
+          }}
+          onInsertText={handleInsertText}
+        />
       </div>
 
       {/* Status Bar — hidden in focus mode */}
