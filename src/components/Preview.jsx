@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkGemoji from 'remark-gemoji'
@@ -35,39 +35,67 @@ export function Preview({
   previewRef,
 }) {
   const previewScrollRef = useRef(null)
+  const [debouncedContent, setDebouncedContent] = useState(content)
 
   const isDark = useDarkMode()
 
   const isLeftSidebarLayout = layout === 'default' || layout === 'sidebar_tabs' || layout === 'editor_only' || layout === 'preview_only'
 
+  // Debounce preview rendering by 200ms to prevent blockages during rapid typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedContent(content)
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [content])
+
   // Feature #12: Export as HTML
   const handleExportHTML = () => {
-    if (!content) return
+    if (!debouncedContent) return
     const previewEl = previewScrollRef.current?.querySelector('article')
     if (!previewEl) return
+    
+    // Clean up elements that shouldn't be exported
+    const clone = previewEl.cloneNode(true)
+    clone.querySelectorAll('.no-export').forEach(el => el.remove())
+
+    const isHtmlDark = isDark
+
     const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="${isHtmlDark ? 'dark' : ''}">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${title || 'Exported Note'}</title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #24292f; }
-  h1,h2,h3,h4,h5,h6 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; }
-  h1,h2 { border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; }
-  code { background: rgba(175,184,193,0.2); padding: 0.2em 0.4em; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 85%; }
-  pre { background: #f6f8fa; color: #24292f; border: 1px solid #d0d7de; padding: 16px; border-radius: 8px; overflow-x: auto; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0 20px;
+    line-height: 1.6;
+    color: ${isHtmlDark ? '#e4e4e7' : '#24292f'};
+    background-color: ${isHtmlDark ? '#09090b' : '#ffffff'};
+    transition: background-color 0.2s, color 0.2s;
+  }
+  h1,h2,h3,h4,h5,h6 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: ${isHtmlDark ? '#ffffff' : '#09090b'}; }
+  h1,h2 { border-bottom: 1px solid ${isHtmlDark ? '#27272a' : '#d0d7de'}; padding-bottom: 0.3em; }
+  code { background: ${isHtmlDark ? 'rgba(110,118,129,0.4)' : 'rgba(175,184,193,0.2)'}; padding: 0.2em 0.4em; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 85%; }
+  pre { background: ${isHtmlDark ? '#161618' : '#f6f8fa'}; color: ${isHtmlDark ? '#e4e4e7' : '#24292f'}; border: 1px solid ${isHtmlDark ? '#27272a' : '#d0d7de'}; padding: 16px; border-radius: 8px; overflow-x: auto; }
   pre code { background: none; padding: 0; }
-  blockquote { border-left: 4px solid #d0d7de; margin: 0; padding: 0 1em; color: #57606a; }
-  table { border-collapse: collapse; width: 100%; }
-  th,td { border: 1px solid #d0d7de; padding: 8px 12px; }
-  th { background: #f6f8fa; }
-  a { color: #0969da; }
+  blockquote { border-left: 4px solid ${isHtmlDark ? '#52525b' : '#d0d7de'}; margin: 0; padding: 0 1em; color: ${isHtmlDark ? '#a1a1aa' : '#57606a'}; background-color: ${isHtmlDark ? 'rgba(39,39,42,0.3)' : '#f6f8fa'}; border-radius: 0 4px 4px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 24px 0; }
+  th,td { border: 1px solid ${isHtmlDark ? '#27272a' : '#d0d7de'}; padding: 8px 12px; }
+  th { background: ${isHtmlDark ? '#161618' : '#f6f8fa'}; color: ${isHtmlDark ? '#ffffff' : '#24292f'}; }
+  tr:nth-child(even) { background-color: ${isHtmlDark ? 'rgba(39,39,42,0.15)' : '#fafafa'}; }
+  a { color: ${isHtmlDark ? '#58a6ff' : '#0969da'}; text-decoration: none; }
+  a:hover { text-decoration: underline; }
   img { max-width: 100%; }
+  svg { display: block; max-width: 100%; height: auto; margin: 24px auto; }
 </style>
 </head>
 <body>
-${previewEl.innerHTML}
+${clone.innerHTML}
 </body>
 </html>`
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
@@ -161,7 +189,7 @@ ${previewEl.innerHTML}
         }}
         className="flex-1 overflow-y-auto p-6 md:p-8 markdown-preview print:p-0 text-zinc-800 dark:text-zinc-300"
       >
-        {!content ? (
+        {!debouncedContent ? (
           <div className="text-center text-zinc-400 dark:text-zinc-500 py-12 text-sm font-light select-none">
             Nothing to preview. Start writing in the editor.
           </div>
@@ -242,7 +270,7 @@ ${previewEl.innerHTML}
                 strong: (props) => <strong {...props} className="font-semibold" />,
               }}
             >
-              {content}
+              {debouncedContent}
             </ReactMarkdown>
           </article>
         )}

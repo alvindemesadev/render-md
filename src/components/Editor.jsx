@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Download, Type, FileSpreadsheet, Clock, NotebookPen, FileCode,
   PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen,
-  Save, List, History, Maximize2, Minimize2,
+  Save, List, History, Maximize2, Minimize2, Tag, X,
 } from 'lucide-react'
 import { Button } from './ui/button'
 import { FindReplace } from './FindReplace'
@@ -73,6 +73,8 @@ export function Editor({
   note, onUpdateNote, onExportMarkdown, onExportHTML,
   isSidebarOpen, onToggleSidebar, layout, editorTab, onChangeEditorTab, layoutSelector,
   editorFontSize,
+  editorFontFamily = 'monospace',
+  theme = 'dark',
   isFocusMode, onToggleFocusMode,
   wordGoal,
   vimMode,
@@ -87,6 +89,32 @@ export function Editor({
   const [showFindReplace, setShowFindReplace] = useState(false)
   const [showToc, setShowToc] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  
+  const [newTagInput, setNewTagInput] = useState('')
+
+  const handleRemoveTag = useCallback((tagToRemove) => {
+    if (!note) return
+    const updatedTags = (note.tags || []).filter(t => t !== tagToRemove)
+    onUpdateNote(note.id, { tags: updatedTags })
+  }, [note, onUpdateNote])
+
+  const handleTagInputKeyDown = useCallback((e) => {
+    if (!note) return
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      const cleanTag = newTagInput.trim().toLowerCase().replace(/[^a-z0-9_#-]/g, '')
+      if (cleanTag && !(note.tags || []).includes(cleanTag)) {
+        const updatedTags = [...(note.tags || []), cleanTag]
+        onUpdateNote(note.id, { tags: updatedTags })
+      }
+      setNewTagInput('')
+    } else if (e.key === 'Backspace' && !newTagInput && (note.tags || []).length > 0) {
+      e.preventDefault()
+      const updatedTags = [...(note.tags || [])]
+      updatedTags.pop()
+      onUpdateNote(note.id, { tags: updatedTags })
+    }
+  }, [note, newTagInput, onUpdateNote])
   const { getSnapshots, saveSnapshot } = useVersionHistory(note?.id, note?.content)
 
   const saveState = useAutosaveIndicator(note?.content ?? '')
@@ -245,6 +273,7 @@ export function Editor({
     '.tok-invalid': { color: '#dc2626' },
   }), [])
 
+
   // Build placeholder as a DOM element so line breaks render correctly
   const placeholderEl = useMemo(() => {
     const el = document.createElement('div')
@@ -252,20 +281,33 @@ export function Editor({
     el.innerHTML = '# New Note<br><br>Start typing your markdown here...'
     return el
   }, [])
+
+  const getFontFamilyStack = (fontFamilyId) => {
+    switch (fontFamilyId) {
+      case 'sans-serif':
+        return 'Inter, system-ui, -apple-system, sans-serif'
+      case 'serif':
+        return 'Lora, Georgia, Cambria, "Times New Roman", Times, serif'
+      case 'monospace':
+      default:
+        return 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace'
+    }
+  }
+
   const cmExtensions = useMemo(() => [
     markdown({ base: markdownLanguage, codeLanguages: languages }),
     EditorView.lineWrapping,
-    // Font size applied via theme so it actually takes effect inside CodeMirror
+    // Font size & Font family applied dynamically inside CodeMirror
     EditorView.theme({
       '&': { fontSize: `${editorFontSize || 14}px` },
       '.cm-scroller': {
-        fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+        fontFamily: getFontFamilyStack(editorFontFamily) + ' !important',
       },
     }),
     formattingKeymap,
     keymap.of([indentWithTab]),
     ...(vimMode ? [vim()] : []),
-  ], [editorFontSize, vimMode])
+  ], [editorFontSize, editorFontFamily, vimMode])
 
   if (!note) {
     return (
@@ -398,6 +440,39 @@ export function Editor({
         </div>
       )}
 
+      {/* Tag Manager Bar — hidden in focus mode */}
+      {!isFocusMode && (
+        <div className="border-b border-zinc-100 dark:border-zinc-800/60 px-6 py-2 bg-zinc-50/50 dark:bg-zinc-950/40 flex items-center gap-2 overflow-x-auto select-none no-export h-9 shrink-0">
+          <Tag className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+            {(note.tags || []).map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-200/60 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 shrink-0"
+              >
+                <span>{tag}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTag(tag)}
+                  title="Remove tag"
+                  className="p-0.5 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer shrink-0"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </span>
+            ))}
+            <input
+              type="text"
+              value={newTagInput}
+              onChange={(e) => setNewTagInput(e.target.value)}
+              onKeyDown={handleTagInputKeyDown}
+              placeholder="+ Add tag..."
+              className="bg-transparent text-[10px] font-mono text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 focus:text-zinc-800 dark:focus:text-zinc-100 focus:outline-none w-20 px-1 py-0.5 transition-colors shrink-0"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Focus mode exit hint */}
       {isFocusMode && (
         <div className="h-8 flex items-center justify-end px-4 shrink-0 bg-white dark:bg-zinc-950 border-b border-zinc-100 dark:border-zinc-800/50">
@@ -429,7 +504,7 @@ export function Editor({
               value={note.content}
               onChange={handleCMChange}
               extensions={cmExtensions}
-              theme={isDark ? darkEditorTheme : lightEditorTheme}
+              theme={theme === 'dark' ? darkEditorTheme : lightEditorTheme}
               basicSetup={{
                 lineNumbers: true,
                 foldGutter: false,

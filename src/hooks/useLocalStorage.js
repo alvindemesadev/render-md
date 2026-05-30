@@ -6,7 +6,7 @@ export function setQuotaWarningHandler(fn) {
   _onQuotaExceeded = fn
 }
 
-export function useLocalStorage(key, initialValue) {
+export function useLocalStorage(key, initialValue, debounceMs = 0) {
   const [value, setValue] = useState(() => {
     try {
       const item = window.localStorage.getItem(key)
@@ -18,21 +18,30 @@ export function useLocalStorage(key, initialValue) {
   })
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify(value))
-    } catch (error) {
-      // Feature #15: surface quota exceeded errors to the user
-      if (error instanceof DOMException && (
-        error.code === 22 ||
-        error.code === 1014 ||
-        error.name === 'QuotaExceededError' ||
-        error.name === 'NS_ERROR_DOM_QUOTA_REACHED'
-      )) {
-        if (_onQuotaExceeded) _onQuotaExceeded()
+    const saveToStorage = () => {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(value))
+      } catch (error) {
+        // Feature #15: surface quota exceeded errors to the user
+        if (error instanceof DOMException && (
+          error.code === 22 ||
+          error.code === 1014 ||
+          error.name === 'QuotaExceededError' ||
+          error.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+        )) {
+          if (_onQuotaExceeded) _onQuotaExceeded()
+        }
+        console.error(`Error setting localStorage key "${key}":`, error)
       }
-      console.error(`Error setting localStorage key "${key}":`, error)
     }
-  }, [key, value])
+
+    if (debounceMs > 0) {
+      const handler = setTimeout(saveToStorage, debounceMs)
+      return () => clearTimeout(handler)
+    } else {
+      saveToStorage()
+    }
+  }, [key, value, debounceMs])
 
   return [value, setValue]
 }

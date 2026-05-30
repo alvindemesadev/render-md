@@ -177,10 +177,11 @@ function LayoutSelector({ layout, onChangeLayout, variant = 'header' }) {
 
 export default function App() {
   const { toast } = useToast()
-  const [notes, setNotes] = useLocalStorage('rendermd_notes', [WELCOME_NOTE])
+  const [notes, setNotes] = useLocalStorage('rendermd_notes', [WELCOME_NOTE], 500)
   const [activeNoteId, setActiveNoteId] = useLocalStorage('rendermd_active_note_id', 'welcome-note')
   
   const [theme, setTheme] = useLocalStorage('rendermd_theme', 'dark')
+  const [editorFontFamily, setEditorFontFamily] = useLocalStorage('rendermd_font_family', 'monospace')
   const [isSidebarOpen, setIsSidebarOpen] = useLocalStorage('rendermd_sidebar_open', true)
   
   // Custom Layout Settings
@@ -519,29 +520,47 @@ export default function App() {
       toast('Switch to a layout that shows the Preview pane first', 'info')
       return
     }
+
+    const clone = previewEl.cloneNode(true)
+    clone.querySelectorAll('.no-export').forEach(el => el.remove())
+
+    const isHtmlDark = theme === 'dark'
+
     const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="${isHtmlDark ? 'dark' : ''}">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${activeNote.title || 'Exported Note'}</title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #24292f; }
-  h1,h2,h3,h4,h5,h6 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; }
-  h1,h2 { border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; }
-  code { background: rgba(175,184,193,0.2); padding: 0.2em 0.4em; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 85%; }
-  pre { background: #f6f8fa; color: #24292f; border: 1px solid #d0d7de; padding: 16px; border-radius: 8px; overflow-x: auto; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0 20px;
+    line-height: 1.6;
+    color: ${isHtmlDark ? '#e4e4e7' : '#24292f'};
+    background-color: ${isHtmlDark ? '#09090b' : '#ffffff'};
+    transition: background-color 0.2s, color 0.2s;
+  }
+  h1,h2,h3,h4,h5,h6 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: ${isHtmlDark ? '#ffffff' : '#09090b'}; }
+  h1,h2 { border-bottom: 1px solid ${isHtmlDark ? '#27272a' : '#d0d7de'}; padding-bottom: 0.3em; }
+  code { background: ${isHtmlDark ? 'rgba(110,118,129,0.4)' : 'rgba(175,184,193,0.2)'}; padding: 0.2em 0.4em; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 85%; }
+  pre { background: ${isHtmlDark ? '#161618' : '#f6f8fa'}; color: ${isHtmlDark ? '#e4e4e7' : '#24292f'}; border: 1px solid ${isHtmlDark ? '#27272a' : '#d0d7de'}; padding: 16px; border-radius: 8px; overflow-x: auto; }
   pre code { background: none; padding: 0; }
-  blockquote { border-left: 4px solid #d0d7de; margin: 0; padding: 0 1em; color: #57606a; }
-  table { border-collapse: collapse; width: 100%; }
-  th,td { border: 1px solid #d0d7de; padding: 8px 12px; }
-  th { background: #f6f8fa; }
-  a { color: #0969da; }
+  blockquote { border-left: 4px solid ${isHtmlDark ? '#52525b' : '#d0d7de'}; margin: 0; padding: 0 1em; color: ${isHtmlDark ? '#a1a1aa' : '#57606a'}; background-color: ${isHtmlDark ? 'rgba(39,39,42,0.3)' : '#f6f8fa'}; border-radius: 0 4px 4px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 24px 0; }
+  th,td { border: 1px solid ${isHtmlDark ? '#27272a' : '#d0d7de'}; padding: 8px 12px; }
+  th { background: ${isHtmlDark ? '#161618' : '#f6f8fa'}; color: ${isHtmlDark ? '#ffffff' : '#24292f'}; }
+  tr:nth-child(even) { background-color: ${isHtmlDark ? 'rgba(39,39,42,0.15)' : '#fafafa'}; }
+  a { color: ${isHtmlDark ? '#58a6ff' : '#0969da'}; text-decoration: none; }
+  a:hover { text-decoration: underline; }
   img { max-width: 100%; }
+  svg { display: block; max-width: 100%; height: auto; margin: 24px auto; }
 </style>
 </head>
 <body>
-${previewEl.innerHTML}
+${clone.innerHTML}
 </body>
 </html>`
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
@@ -710,6 +729,8 @@ ${previewEl.innerHTML}
                 onChangeEditorTab={setEditorTab}
                 layoutSelector={layoutSelectorElement}
                 editorFontSize={editorFontSize}
+                editorFontFamily={editorFontFamily}
+                theme={theme}
                 isFocusMode={isFocusMode}
                 onToggleFocusMode={() => setIsFocusMode(v => !v)}
                 wordGoal={activeNote?.wordGoal || 0}
@@ -821,6 +842,56 @@ ${previewEl.innerHTML}
                   className="flex-1 accent-zinc-700 dark:accent-zinc-300 cursor-pointer" />
                 <button type="button" onClick={() => setEditorFontSize(s => Math.min(24, s + 1))}
                   className="w-7 h-7 rounded border border-zinc-200 dark:border-zinc-700 flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer text-zinc-600 dark:text-zinc-400">+</button>
+              </div>
+            </div>
+
+            {/* Theme Selector */}
+            <div>
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
+                Theme
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {['light', 'dark'].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTheme(t)}
+                    className={`px-3 py-1.5 rounded border text-xs font-medium capitalize cursor-pointer transition-colors ${
+                      theme === t
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
+                        : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Font Family Selector */}
+            <div>
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
+                Editor Font Family
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'monospace', name: 'Monospace' },
+                  { id: 'sans-serif', name: 'Sans-Serif' },
+                  { id: 'serif', name: 'Serif' }
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setEditorFontFamily(f.id)}
+                    className={`px-3 py-1.5 rounded border text-xs font-medium cursor-pointer transition-colors ${
+                      editorFontFamily === f.id
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100'
+                        : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                    }`}
+                  >
+                    {f.name}
+                  </button>
+                ))}
               </div>
             </div>
 
