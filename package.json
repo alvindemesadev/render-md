@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "npm run build && wrangler dev",
-    "deploy": "npm run build && wrangler deploy"
+    "preview": "vite preview",
+    "deploy": "npx wrangler pages deploy dist --project-name render-md"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.3",
@@ -39,7 +39,6 @@
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.40.0",
     "@eslint/js": "^10.0.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
