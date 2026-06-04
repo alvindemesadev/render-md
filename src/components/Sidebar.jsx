@@ -462,6 +462,8 @@ export function Sidebar({
           <span>Keyboard Shortcuts</span>
         </Button>
 
+        {layoutSelector}
+
         <Button
           type="button"
           variant="ghost"
